@@ -1,0 +1,31 @@
+@startuml
+!include <awslib/AWSCommon>
+!include <awslib/Compute/Lambda>
+!include <awslib/Containers/ElasticContainerService>
+!include <awslib/ApplicationIntegration/SimpleQueueService>
+
+left to right direction
+
+agent "GitHub Apps" as apps #fff
+
+card Receiver {
+Lambda(httpserver, "httpserver", "httpserver")
+SimpleQueueService(queue1, "myshoes-queue", "Queue")
+}
+
+card Dispatcher {
+SimpleQueueService(queue2, "myshoes-queue", "Queue")
+Lambda(dispatcher, "dispatcher", "executor")
+ElasticContainerService(ecs, "myshoes-ecs", "ECS Task")
+}
+
+apps -[hidden]do- queue2
+httpserver -[hidden]do- dispatcher
+queue1 -[hidden]do- ecs
+
+apps --> httpserver : Webhook (workflow_job)
+httpserver --> queue1 : sqs:SendMessage
+
+queue2 --> dispatcher : Event source mapping
+dispatcher --> ecs : ecs:RunTask by shoes-ecs-task
+@enduml
